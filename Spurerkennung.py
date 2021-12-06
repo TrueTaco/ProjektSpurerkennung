@@ -23,7 +23,7 @@ def region_of_interest(img, vertices):
     return masked_image
 
 def process_frame(frame):
-    img1_hsv = cv.cvtColor(frame, cv.COLOR_RGB2HSV)
+    img1_hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
     #plt.imshow(frame)
     #plt.show()
 
@@ -34,20 +34,21 @@ def process_frame(frame):
 
     img1_hsv = region_of_interest(img1_hsv, region_of_interest_vertices)
 
-    lower_white = np.array([60,0,220], dtype=np.uint8)
-    upper_white = np.array([110,10,255], dtype=np.uint8)
-    mask = cv.inRange(img1_hsv, lower_white, upper_white)
+    lower_white = np.array([0,0,220], dtype=np.uint8)
+    upper_white = np.array([180,10,255], dtype=np.uint8)
+    # lower_yellow = np.array([25,0,220], dtype=np.uint8)
+    # upper_yellow = np.array([35,10,255], dtype=np.uint8)
+    mask_white = cv.inRange(img1_hsv, lower_white, upper_white)
 
-    img_sign1 = cv.inRange(img1_hsv, (15, 40, 230), (255, 255, 255))
+    mask_yellow = cv.inRange(img1_hsv, (15, 10, 220), (35, 255, 255))
+    # mask_yellow = cv.inRange(img1_hsv, (60, 40, 230), (100, 255, 255))
 
-    img_sign = img_sign1 + mask
+    img_sign = mask_yellow + mask_white
     kernel_small5 = np.array([[0,1,0],[1,1,1],[0,1,0]], 'uint8')
     img_sign = cv.dilate(img_sign, kernel_small5, iterations=5)
 
     img_filtered = frame.copy()
     img_filtered[np.where(img_sign==0)] = 0
-
-    
 
     return img_filtered
 
