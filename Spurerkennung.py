@@ -56,17 +56,25 @@ capture = cv.VideoCapture('img/Udacity/project_video.mp4')
 frameNr = 0
 while(True):
     success, frame = capture.read() 
-    processed_img = process_frame(frame)
-    alpha = 0.1
-    beta = (1.0 - alpha)
-    dst = cv.addWeighted(frame, alpha, processed_img, beta, 0.0)
-    test = frame + processed_img
+    if(success):
+        processed_img = process_frame(frame)
+        alpha = 0.1
+        beta = (1.0 - alpha)
+        dst = cv.addWeighted(frame, alpha, processed_img, beta, 0.0)
+        test = frame + processed_img
 
-    cv.imshow("Current Frame",test)
-    #display.clear_output(wait=True)
-    #plt.show()   
-    frameNr += 1
-    if cv.waitKey(1) & 0xFF == ord("q"):
+        window = cv.imshow("Current Frame",test)
+        #display.clear_output(wait=True)
+        #plt.show()   
+        frameNr += 1
+        key = cv.waitKey(1)
+        if key == ord("q"):
+            cv.destroyAllWindows()
+            print("Playback interrupted by user.")
+            break
+        if key == ord('p'):
+            cv.waitKey(-1) #wait until any key is pressed
+    else:
+        print("Playback finished.")
+        capture.release()
         break
-    
-capture.release()
