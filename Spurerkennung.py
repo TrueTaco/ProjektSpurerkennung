@@ -54,16 +54,29 @@ def process_frame(frame):
 
 capture = cv.VideoCapture('img/Udacity/project_video.mp4')
 frameNr = 0
+
+
+newFrameTime = 0
+prevFrameTime = 0
+font = cv.FONT_HERSHEY_SIMPLEX
+
 while(True):
     success, frame = capture.read() 
     if(success):
+        newFrameTime = time.time()
+
         processed_img = process_frame(frame)
-        alpha = 0.1
+        alpha = 0.4
         beta = (1.0 - alpha)
         dst = cv.addWeighted(frame, alpha, processed_img, beta, 0.0)
-        test = frame + processed_img
+        test = dst + processed_img
 
-        window = cv.imshow("Current Frame",test)
+        fps = 1/(newFrameTime - prevFrameTime)
+        prevFrameTime = newFrameTime
+        fps = int(fps)
+        fps = str(fps)
+        cv.putText(test, fps, (7, 30), font, 1, (100, 255, 0), 1, cv.LINE_AA)
+        cv.imshow("Current Frame", test)
         #display.clear_output(wait=True)
         #plt.show()   
         frameNr += 1
@@ -76,5 +89,7 @@ while(True):
             cv.waitKey(-1) #wait until any key is pressed
     else:
         print("Playback finished.")
+        cv.destroyAllWindows()
         capture.release()
         break
+    
