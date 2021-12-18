@@ -1,11 +1,11 @@
 import cv2 as cv
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 from time import sleep
 from IPython import display
-
-print('Willkommen beim Projekt "Erkennung von Spurmarkierungen"')
-
+from matplotlib.patches import Rectangle as Rect
+import statistics as stat
 
 def region_of_interest(img, vertices):
     # Define a blank matrix that matches the image height/width.
@@ -50,19 +50,92 @@ def process_frame(frame):
     img_filtered = frame.copy()
     img_filtered[np.where(img_sign==0)] = 0
 
+
+    findFourVertices(img_filtered)
+
     return img_filtered
 
+def findFourVertices(img_filtered):
+    height = len(img_filtered)
+    width = len(img_filtered[0])
+
+    startHeight = int(height/1.5)
+    maxWidth = int(width/2)
+    points = []
+
+    tempHeight = startHeight
+    valueFound = False
+    while valueFound == False:
+        # Top left point
+        pointCloud = np.where(img_filtered[startHeight][:maxWidth - 1] != 0)
+        if(len(pointCloud[0]) != 0):
+            # print(pointCloud)
+            xMean = int((pointCloud[0][0] + pointCloud[0][-1])/2)
+            points.append((xMean, startHeight))
+
+            valueFound = True
+        else:
+            startHeight += 1
+
+    startHeight = tempHeight
+    valueFound = False
+    while valueFound == False:
+        # Top right point
+        pointCloud = np.where(img_filtered[startHeight][maxWidth + 1:] != 0)
+        if(len(pointCloud[0]) != 0):
+            xMean = int((pointCloud[0][0] + pointCloud[0][-1])/2)
+            points.append((xMean, startHeight))
+            valueFound = True
+        else:
+            startHeight += 1
+
+    
+    valueFound = False
+    startHeight = height - 1
+    tempHeight = startHeight
+    while valueFound == False:
+        # Bottom left point
+        pointCloud = np.where(img_filtered[startHeight][:maxWidth - 1] != 0)
+        if(len(pointCloud[0]) != 0):
+            # print(pointCloud)
+            xMean = int((pointCloud[0][0] + pointCloud[0][-1])/2)
+            points.append((xMean, startHeight))
+            valueFound = True
+        else:
+            startHeight -= 1
+
+    startHeight = tempHeight
+    valueFound = False
+    while valueFound == False:
+        # Bottom right point
+        pointCloud = np.where(img_filtered[startHeight][maxWidth + 1:] != 0)
+        if(len(pointCloud[0]) != 0):
+            xMean = int((pointCloud[0][0] + pointCloud[0][-1])/2)
+            points.append((xMean, startHeight))
+            valueFound = True
+        else:
+            startHeight -= 1
+
+    print("Points: ", points)
+
+
+def perspective_transformation():
+    return "hello"
 
 capture = cv.VideoCapture('img/Udacity/project_video.mp4')
 frameNr = 0
-
 
 newFrameTime = 0
 prevFrameTime = 0
 font = cv.FONT_HERSHEY_SIMPLEX
 
+# success = True
+# capture.set(1,2)
+# success, frame = capture.read()
+
 while(True):
     success, frame = capture.read() 
+
     if(success):
         newFrameTime = time.time()
 
