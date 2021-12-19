@@ -2,12 +2,11 @@ import cv2 as cv
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-from time import sleep
-from IPython import display
-from matplotlib.patches import Rectangle as Rect
-import statistics as stat
 
 def region_of_interest(img, vertices):
+    """
+    - Sets all pixels to black outside of the region of interest defined by given verticies
+    """
     # Define a blank matrix that matches the image height/width.
     mask = np.zeros_like(img)
     # Retrieve the number of color channels of the image.
@@ -23,13 +22,16 @@ def region_of_interest(img, vertices):
     return masked_image
 
 def process_frame(frame):
+    """
+    - Filters lanes by filtering out all colors not matching the color yellow and white (lane colors)
+    - Dilates filtered lanes to increase visibility 
+    """
     img1_hsv = cv.cvtColor(frame, cv.COLOR_RGB2HSV)
 
     height = len(img1_hsv)
     width = len(img1_hsv[0])
     region_of_interest_vertices = [[0, height],[width / 2, height / 2],[width, height],]   
     img_region_of_interest = region_of_interest(img1_hsv, region_of_interest_vertices)
-    
 
     lower_white = np.array([60,0,220], dtype=np.uint8)
     upper_white = np.array([110,10,255], dtype=np.uint8)
@@ -45,15 +47,73 @@ def process_frame(frame):
     right_curve_filtered = frame.copy()
     right_curve_filtered[np.where(right_curve==0)] = 0
 
-    
-
     kernel = np.array([[1,1,1],[1,-8,1],[1,1,1]],np.float32)
     left_curve_filtered = cv.filter2D(left_curve_filtered,-1,kernel)
     right_curve_filtered = cv.filter2D(right_curve_filtered,-1,kernel)
 
     return left_curve_filtered,right_curve_filtered
 
+def process_frame_gray_slicing(frame):
+    """
+    - Second attempt of filtering out the lanes by using slicing of grays
+    - Failes in certain areas because of not enough contrast between road an lane
+    """
+    img_grey = cv.cvtColor(frame, cv.COLOR_RGB2HSV)
+
+    thresh1 = 90
+
+    w = len(img_grey[0])
+    h = len(img_grey)
+
+    height = len(img_grey)
+    width = len(img_grey[0])
+    region_of_interest_vertices = [[0, height],[width / 2, height / 2],[width, height],]   
+    img_region_of_interest = region_of_interest(img_grey, region_of_interest_vertices)
+
+    img_region_of_interest_old = cv.cvtColor(img_region_of_interest, cv.COLOR_RGB2GRAY)
+
+    img_region_of_interest = np.zeros((h,w), dtype = int)
+
+    for i in range(h-1):
+        for j in range(w-1):
+            if img_region_of_interest_old[i,j] <= thresh1: 
+                img_region_of_interest[i,j] = 0
+            else:
+                img_region_of_interest[i,j] = 255
+                
+    plt.imshow(img_region_of_interest)
+
+    return img_region_of_interest
+
+def process_frame_gray(frame):
+    """
+    - Attempt at filtering out the lanes by using canny edge detection in combination with houghline detection
+    """
+    img_grey = cv.cvtColor(frame, cv.COLOR_RGB2GRAY)
+
+    edges = cv.Canny(img_grey,100,200,apertureSize = 3)
+    lines = cv.HoughLines(edges,1,np.pi/180, 200)
+
+    lines = [x for x in lines if x is not None]
+
+    for r,theta in lines[0]:
+        a = np.cos(theta)
+        b = np.sin(theta)
+        x0 = a*r
+        y0 = b*r
+        x1 = int(x0 + 1000*(-b))
+        y1 = int(y0 + 1000*(a))
+        x2 = int(x0 - 1000*(-b))
+        y2 = int(y0 - 1000*(a))
+        cv.line(img_grey,(x1,y1), (x2,y2), (0,0,255),2)
+
+    return img_grey
+
 def findFourVertices(img_filtered):
+    """
+    - Previously used to detect start and endpoints of lanes
+    - not used because of bad performance
+    """
     height = len(img_filtered)
     width = len(img_filtered[0])
 
@@ -116,9 +176,22 @@ def findFourVertices(img_filtered):
 
     print("Points: ", points)
 
+def curveradius(frame, xleft, xright):
+    """
+    - Calculates curveradius of given image depending on the x-coordinates for left and right curve
+    """
+    y = np.linspace(0, frame.shape[0]-1, frame.shape[0])
+    x_m_per_pix = 30.5/720
+    y_m_per_pix = 3.7/700
+    y_eval = np.max(y)
 
-def perspective_transformation():
-    return "hello"
+    curveleft = np.ployfit(y*y_m_per_pix, xleft*x_m_per_pix)
+    curveright = np.polyfit(y*y_m_per_pix, xright*x_m_per_pix)
+
+    curverad_left = ((1 + (2*curveleft[0]*y_eval*y_m_per_pix + curveleft[1])**2)**1.5) / np.absolute(2*curveleft[0])
+    curverad_right = ((1 + (2*curveright[0]*y_eval*y_m_per_pix + curveright[1])**2)**1.5) / np.absolute(2*curveright[0])
+
+    return curverad_left, curverad_right
 
 capture = cv.VideoCapture('img/Udacity/project_video.mp4')
 frameNr = 0
@@ -127,19 +200,18 @@ newFrameTime = 0
 prevFrameTime = 0
 font = cv.FONT_HERSHEY_SIMPLEX
 
-# success = True
-# capture.set(1,2)
-# success, frame = capture.read()
-
 while(True):
     success, frame = capture.read() 
-
+    if frameNr == 1:
+        left_curve, right_curve = process_frame(frame)
     if(success):
         newFrameTime = time.time()
 
-        left_curve, right_curve = process_frame(frame)
+        # Updates detected lanes by updating detected lanes every 3 seconds inorder to increase performance
+        if frameNr%3 == 0:
+            left_curve, right_curve = process_frame(frame)
         all_curves = left_curve + right_curve
-        findFourVertices(all_curves)
+
         alpha = 0.4
         beta = (1.0 - alpha)
         dark_mask = cv.addWeighted(frame, alpha, all_curves, beta, 0.0)
@@ -147,19 +219,33 @@ while(True):
         fps = 1/(newFrameTime - prevFrameTime)
         prevFrameTime = newFrameTime
         fps = int(fps)
-        fps = str(fps)
+        fps = str(fps) 
 
-        cv.putText(darkened_image, fps, (7, 30), font, 1, (100, 255, 0), 1, cv.LINE_AA)
-        cv.imshow("Current Frame", darkened_image)
+        # Perspective transformation for curve fitting
+        old_points = np.float32([[200,720],[1000,720],[460,460],[740,460]])
+        new_points = np.float32([[0,800],[600,800],[0,0],[600,0]])
+        perspective_transform = cv.getPerspectiveTransform(old_points,new_points)
+        new_perspecitve = cv.warpPerspective(darkened_image,perspective_transform,(800,600))
+        
+        # Boolean for activating/deactivating perspektive transform
+        transform_perspective = False
+
+        if transform_perspective == False:
+            cv.putText(darkened_image, fps, (7, 30), font, 1, (100, 255, 0), 1, cv.LINE_AA)
+            cv.imshow("Current Frame", darkened_image)
+        else:
+            cv.putText(new_perspecitve, fps, (7, 30), font, 1, (100, 255, 0), 1, cv.LINE_AA)
+            cv.imshow("Current Frame", new_perspecitve)
 
         frameNr += 1
         key = cv.waitKey(1)
+        # Control buttons for video playback
         if key == ord("q"):
             cv.destroyAllWindows()
             print("Playback interrupted by user.")
             break
         if key == ord('p'):
-            cv.waitKey(-1) #wait until any key is pressed
+            cv.waitKey(-1) # Wait until any key is pressed
     else:
         print("Playback finished.")
         cv.destroyAllWindows()
