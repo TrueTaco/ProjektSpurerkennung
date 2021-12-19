@@ -195,27 +195,30 @@ def curveradius(frame, xleft, xright):
 
 capture = cv.VideoCapture('img/Udacity/project_video.mp4')
 frameNr = 0
-
 newFrameTime = 0
 prevFrameTime = 0
 font = cv.FONT_HERSHEY_SIMPLEX
 
 while(True):
     success, frame = capture.read() 
-    if frameNr == 1:
+    if frameNr == 1 or frameNr == 0:
         left_curve, right_curve = process_frame(frame)
+
     if(success):
         newFrameTime = time.time()
 
-        # Updates detected lanes by updating detected lanes every 3 seconds inorder to increase performance
+        # Updates detected lanes every 3 seconds in-order to increase performance
         if frameNr%3 == 0:
             left_curve, right_curve = process_frame(frame)
         all_curves = left_curve + right_curve
 
+        # Puts a mask over the old frame to improve visibility of the filtered lanes in "all_curves"
         alpha = 0.4
         beta = (1.0 - alpha)
         dark_mask = cv.addWeighted(frame, alpha, all_curves, beta, 0.0)
         darkened_image = all_curves + dark_mask
+
+        # Calcultes FPS
         fps = 1/(newFrameTime - prevFrameTime)
         prevFrameTime = newFrameTime
         fps = int(fps)
@@ -228,9 +231,9 @@ while(True):
         new_perspecitve = cv.warpPerspective(darkened_image,perspective_transform,(800,600))
         
         # Boolean for activating/deactivating perspektive transform
-        transform_perspective = False
+        transform_perspective = True
 
-        if transform_perspective == False:
+        if transform_perspective == True:
             cv.putText(darkened_image, fps, (7, 30), font, 1, (100, 255, 0), 1, cv.LINE_AA)
             cv.imshow("Current Frame", darkened_image)
         else:
@@ -240,6 +243,8 @@ while(True):
         frameNr += 1
         key = cv.waitKey(1)
         # Control buttons for video playback
+        # Press P to pause
+        # Press q to quit
         if key == ord("q"):
             cv.destroyAllWindows()
             print("Playback interrupted by user.")
@@ -251,4 +256,3 @@ while(True):
         cv.destroyAllWindows()
         capture.release()
         break
-    
