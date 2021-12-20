@@ -84,7 +84,7 @@ def getXValues(img, right):
 
     return leftPoints, rightPoints
 
-def curveradius(frame, xleft, xright):
+def curveRadius(frame, xleft, xright):
     y = np.linspace(0, frame.shape[0], frame.shape[0])
     x_m_per_pix = 30.5/720
     y_m_per_pix = 3.7/720
@@ -135,7 +135,7 @@ while(True):
         # Get current X values of the left line:        
         leftPoints, rightPoints = getXValues(all_curves_transformed, False)
         # Calculate 
-        curveRadius = curveradius(all_curves_transformed, leftPoints, rightPoints)
+        curveRadiusLeft, curveRadiusRight = curveRadius(all_curves_transformed, leftPoints, rightPoints)
 
         alpha = 0.4
         beta = (1.0 - alpha)
@@ -153,8 +153,10 @@ while(True):
         cv.putText(darkened_image, fps, (7, 30), font, 1, (100, 255, 0), 1, cv.LINE_AA)
         cv.imshow("Normal POV", darkened_image)
 
-        cv.putText(birds_eye_view, fps, (7, 30), font, 1, (100, 255, 0), 1, cv.LINE_AA)
-        cv.putText(birds_eye_view, str(curveRadius), (7, 50), font, 1, (100, 255, 0), 1, cv.LINE_AA)
+        curveLeftText = "Radius left: " + str(curveRadiusLeft)
+        curveRightText = "Radius left: " + str(curveRadiusRight)
+        cv.putText(birds_eye_view, curveLeftText, (7, 60), font, 1, (100, 255, 0), 1, cv.LINE_AA)
+        cv.putText(birds_eye_view, curveRightText, (7, 90), font, 1, (100, 255, 0), 1, cv.LINE_AA)
         cv.imshow("Birds-Eye View", birds_eye_view)
 
 
