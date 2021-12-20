@@ -33,11 +33,13 @@ def process_frame(frame):
     region_of_interest_vertices = [[0, height],[width / 2, height / 2],[width, height],]   
     img_region_of_interest = region_of_interest(img1_hsv, region_of_interest_vertices)
 
+    # Filter colors
     lower_white = np.array([60,0,220], dtype=np.uint8)
     upper_white = np.array([110,10,255], dtype=np.uint8)
     left_curve = cv.inRange(img_region_of_interest, lower_white, upper_white)
     right_curve = cv.inRange(img_region_of_interest, (15, 40, 230), (255, 255, 255))
 
+    # Enlarge lane for better visibility
     kernel_small5 = np.array([[0,1,0],[1,1,1],[0,1,0]], 'uint8')
     left_curve = cv.dilate(left_curve, kernel_small5, iterations=5)
     right_curve = cv.dilate(right_curve, kernel_small5, iterations=5)
@@ -175,23 +177,6 @@ def findFourVertices(img_filtered):
             startHeight -= 1
 
     print("Points: ", points)
-
-def curveradius(frame, xleft, xright):
-    """
-    - Calculates curveradius of given image depending on the x-coordinates for left and right curve
-    """
-    y = np.linspace(0, frame.shape[0]-1, frame.shape[0])
-    x_m_per_pix = 30.5/720
-    y_m_per_pix = 3.7/700
-    y_eval = np.max(y)
-
-    curveleft = np.ployfit(y*y_m_per_pix, xleft*x_m_per_pix)
-    curveright = np.polyfit(y*y_m_per_pix, xright*x_m_per_pix)
-
-    curverad_left = ((1 + (2*curveleft[0]*y_eval*y_m_per_pix + curveleft[1])**2)**1.5) / np.absolute(2*curveleft[0])
-    curverad_right = ((1 + (2*curveright[0]*y_eval*y_m_per_pix + curveright[1])**2)**1.5) / np.absolute(2*curveright[0])
-
-    return curverad_left, curverad_right
 
 capture = cv.VideoCapture('img/Udacity/project_video.mp4')
 frameNr = 0
